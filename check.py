@@ -53,5 +53,5 @@ if __name__ == "__main__":
     if not extra_pdfs:
         print("No extra PDFs found.")
     else:
-        print(f"Extra PDFs list has been written to {extra_list_file}")
+        print(f"Missing PDFs list has been written to {extra_list_file}")
 
