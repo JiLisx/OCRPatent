@@ -62,7 +62,7 @@ def process_pdf(pdf_file, folder_path, finished_pdfs, output_folder):
         return None, pnr, False  # Return pnr and False to indicate failure
 
 
-def process_pdf_folder(folder_path, output_folder, num_processes=10):
+def process_pdf_folder(folder_path, output_folder,global_finish_file, global_failed_file, num_processes=10):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -81,6 +81,19 @@ def process_pdf_folder(folder_path, output_folder, num_processes=10):
 
     with open(failed_file, 'r') as file:
         failed_pdfs = set(line.strip() for line in file.readlines())
+
+    # 读取全局的 finish_continue.txt
+    if os.path.exists(global_finish_file):
+        with open(global_finish_file, 'r') as file:
+            global_finished_pdfs = set(line.strip() for line in file.readlines())
+        # 合并本地和全局的 finished_pdfs
+        finished_pdfs.update(global_finished_pdfs)
+
+    # 读取全局失败文件
+    if os.path.exists(global_failed_file):
+        with open(global_failed_file, 'r') as file:
+            global_failed_pdfs = set(line.strip() for line in file.readlines())
+        failed_pdfs.update(global_failed_pdfs)
 
     pdf_files = []
     for root, _, files in os.walk(folder_path):
@@ -128,8 +141,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--pdf_folder_path', type=str, default='./', help='Path to the PDF folder')
     parser.add_argument('--output_folder', type=str, default='./ocr_results/', help='Path to the output folder')
+    parser.add_argument('--global_finish_file', type=str, default='./global_finish_continue.txt', help='Path to the global finish file')
+    parser.add_argument('--global_failed_file', type=str, default='./global_failed_continue.txt', help='Path to the global failed file')
     parser.add_argument('--num_processes', type=int, default=5, help='Number of processes to use')
     args = parser.parse_args()
 
-    process_pdf_folder(args.pdf_folder_path, args.output_folder, num_processes=args.num_processes)
+    process_pdf_folder(args.pdf_folder_path, args.output_folder, args.global_finish_file, args.global_failed_file, num_processes=args.num_processes)
 
