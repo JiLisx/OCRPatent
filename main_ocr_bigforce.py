@@ -126,5 +126,5 @@ def process_pdf_folder(folder_path, output_folder, num_processes=10):
 if __name__ == '__main__':
     pdf_folder_path = './'
     output_folder = './ocr_results/'
-    process_pdf_folder(pdf_folder_path, output_folder, num_processes=5)
+    process_pdf_folder(pdf_folder_path, output_folder, num_processes=10)
 
