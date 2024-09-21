@@ -24,6 +24,7 @@ def list_downloaded_pdfs(root_paths):
                     if filename.endswith('.pdf'):
                         # 去掉文件名中的特殊字符
                         clean_filename = filename.replace('*', '').replace('.pdf', '').replace('-p920mint', '')
+                        clean_filename = clean_filename.strip().upper()  # 统一转换为大写并去除首尾空格
                         downloaded_pdfs.add(clean_filename)
                     pbar.update(1)
 
@@ -35,11 +36,22 @@ def find_missing_pdfs(grant_pats, downloaded_pdfs):
     print(f"Total missing PDFs: {len(missing_pdfs)}")
     return missing_pdfs
 
+def find_extra_pdfs(downloaded_pdfs, grant_pats):
+    extra_pdfs = downloaded_pdfs - grant_pats
+    print(f"Total extra PDFs: {len(extra_pdfs)}")
+    return extra_pdfs
+
 def write_missing_pdfs(missing_pdfs, file_path):
     with open(file_path, 'w') as file:
         for pdf in sorted(missing_pdfs):
             file.write(pdf + "\n")
     print(f"Missing PDFs written to: {file_path}")
+
+def write_extra_pdfs(extra_pdfs, file_path):
+    with open(file_path, 'w') as file:
+        for pdf in sorted(extra_pdfs):
+            file.write(pdf + "\n")
+    print(f"Extra PDFs written to: {file_path}")
 
 if __name__ == "__main__":
      # 定义需要遍历的根目录列表
@@ -49,15 +61,25 @@ if __name__ == "__main__":
     ]
     grant_file = os.path.join(root_paths[0], "grant_pnr_all2406.txt")
     missing_list_file = os.path.join(root_paths[0], "missing_pdfs2406.txt")
+    extra_list_file = os.path.join(root_paths[0], "extra_pdfs2406.txt")
 
     grant_pats = read_patents(grant_file)
     downloaded_pdfs = list_downloaded_pdfs(root_paths)
     missing_pdfs = find_missing_pdfs(grant_pats, downloaded_pdfs)
+    extra_pdfs = find_extra_pdfs(downloaded_pdfs, grant_pats)
 
     # 写入缺失的 PDF 列表
     write_missing_pdfs(missing_pdfs, missing_list_file)
+
+    # 写入多余的 PDF 列表
+    write_extra_pdfs(extra_pdfs, extra_list_file)
 
     if not missing_pdfs:
         print("No missing PDFs found.")
     else:
         print(f"Missing PDFs list has been written to {missing_list_file}")
+
+    if not extra_pdfs:
+        print("No extra PDFs found.")
+    else:
+        print(f"Extra PDFs list has been written to {extra_list_file}")
