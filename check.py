@@ -45,8 +45,8 @@ if __name__ == "__main__":
         "/data/home/jdang/SIPO_PDF_B",
         "/data/home/liji/dload/dload2023"
     ]
-    grant_file = os.path.join(root_path, "grant_pnr_all2406.txt")
-    extra_list_file = os.path.join(root_path, "missing_pdfs2406.txt")
+    grant_file = os.path.join(root_paths, "grant_pnr_all2406.txt")
+    extra_list_file = os.path.join(root_paths, "missing_pdfs2406.txt")
 
     grant_pats = read_patents(grant_file)
     downloaded_pdfs = list_downloaded_pdfs(root_path)
