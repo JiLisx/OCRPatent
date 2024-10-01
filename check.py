@@ -85,7 +85,8 @@ if __name__ == "__main__":
     ]
     # 定义需要排除的目录
     exclude_paths = [
-        "/data/home/liji/dload/dload2023/CN123A"
+        "/data/home/liji/dload/dload2023/CN123A",
+        "/data/home/liji/dload/dload2023/CN122"
     ]
     grant_file = os.path.join(root_paths[0], "grant_pnr_all2406.txt")
     missing_list_file = os.path.join(root_paths[0], "missing_pdfs2406.txt")
