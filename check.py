@@ -72,10 +72,10 @@ def write_extra_pdfs(extra_pdfs, file_path):
 def write_duplicate_pdfs(duplicates, file_path):
     with open(file_path, 'w') as file:
         for pdf, paths in sorted(duplicates.items()):
-            file.write(f"{pdf}: {len(paths)} duplicate(s)\n")
-            for path in paths:
-                file.write(f"  {path}\n")
+            line = f"{pdf}, {len(paths)}, " + ", ".join(paths)
+            file.write(line + "\n")
     print(f"Duplicate PDFs and their paths written to: {file_path}")
+
     
 if __name__ == "__main__":
      # 定义需要遍历的根目录列表
