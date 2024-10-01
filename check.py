@@ -42,12 +42,12 @@ def list_downloaded_pdfs(root_paths, exclude_paths=None):
 
 def find_missing_pdfs(grant_pats, downloaded_pdfs):
     missing_pdfs = grant_pats - downloaded_pdfs
-    print(f"Total missing PDFs: {len(missing_pdfs)}")
+    print(f"Patents found in the grant file but missing in the download files: {len(missing_pdfs)}")
     return missing_pdfs
 
 def find_extra_pdfs(downloaded_pdfs, grant_pats):
     extra_pdfs = downloaded_pdfs - grant_pats
-    print(f"Total extra PDFs: {len(extra_pdfs)}")
+    print(f"Extra PDF files found in the download directory but not in the grant file: {len(extra_pdfs)}")
     return extra_pdfs
 
 def write_missing_pdfs(missing_pdfs, file_path):
@@ -88,10 +88,10 @@ if __name__ == "__main__":
     if not missing_pdfs:
         print("No missing PDFs found.")
     else:
-        print(f"Patents found in the grant file but missing in the download files has been written to {missing_list_file}")
+        print(f"Missing pdf has been written to {missing_list_file}")
 
     if not extra_pdfs:
         print("No extra PDFs found.")
     else:
-        print(f"Extra PDF files found in the download directory but not in the grant file has been written to {extra_list_file}")
+        print(f"Extra PDF has been written to {extra_list_file}")
 
