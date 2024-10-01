@@ -36,7 +36,7 @@ def list_downloaded_pdfs(root_paths, exclude_paths=None):
                         downloaded_pdfs.add(clean_filename)
                     pbar.update(1)
 
-    print(f"Total PDF files processed: {len(downloaded_pdfs)}")
+    print(f"Total PDF files downloaded: {len(downloaded_pdfs)}")
     return downloaded_pdfs
 
 
@@ -88,9 +88,10 @@ if __name__ == "__main__":
     if not missing_pdfs:
         print("No missing PDFs found.")
     else:
-        print(f"Missing PDFs list has been written to {missing_list_file}")
+        print(f"Patents found in the grant file but missing in the download files has been written to {missing_list_file}")
 
     if not extra_pdfs:
         print("No extra PDFs found.")
     else:
-        print(f"Extra PDFs list has been written to {extra_list_file}")
+        print(f"Extra PDF files found in the download directory but not in the grant file has been written to {extra_list_file}")
+
