@@ -54,13 +54,11 @@ def write_missing_pdfs(missing_pdfs, file_path):
     with open(file_path, 'w') as file:
         for pdf in sorted(missing_pdfs):
             file.write(pdf + "\n")
-    print(f"Missing PDFs written to: {file_path}")
 
 def write_extra_pdfs(extra_pdfs, file_path):
     with open(file_path, 'w') as file:
         for pdf in sorted(extra_pdfs):
             file.write(pdf + "\n")
-    print(f"Extra PDFs written to: {file_path}")
 
 if __name__ == "__main__":
      # 定义需要遍历的根目录列表
