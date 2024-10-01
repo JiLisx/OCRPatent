@@ -93,10 +93,10 @@ if __name__ == "__main__":
     duplicate_list_file = os.path.join(root_paths[0], "duplicate_pdfs2406.txt")
 
     grant_pats = read_patents(grant_file)
-    downloaded_pdfs = list_downloaded_pdfs(root_paths, exclude_paths)
+    downloaded_pdfs, duplicate_paths = list_downloaded_pdfs(root_paths, exclude_paths)
     missing_pdfs = find_missing_pdfs(grant_pats, downloaded_pdfs)
     extra_pdfs = find_extra_pdfs(downloaded_pdfs, grant_pats)
-    duplicates = find_duplicate_pdfs(downloaded_pdfs)
+    duplicates = find_duplicate_pdfs(duplicate_paths)
 
     # 写入缺失的 PDF 列表
     write_missing_pdfs(missing_pdfs, missing_list_file)
