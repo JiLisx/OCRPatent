@@ -1,5 +1,6 @@
 import os
 from tqdm import tqdm
+from collections import defaultdict
 
 def read_patents(file_path):
     with open(file_path, 'r') as file:
@@ -9,6 +10,7 @@ def read_patents(file_path):
 
 def list_downloaded_pdfs(root_paths, exclude_paths=None):
     downloaded_pdfs = set()
+    duplicate_paths = defaultdict(list)
     total_files = 0
 
     if exclude_paths is None:
@@ -34,10 +36,11 @@ def list_downloaded_pdfs(root_paths, exclude_paths=None):
                         clean_filename = filename.replace('*', '').replace('.pdf', '').replace('-p920mint', '')
                         clean_filename = clean_filename.strip().upper()  # 统一转换为大写并去除首尾空格
                         downloaded_pdfs.add(clean_filename)
+                        duplicate_paths[clean_filename].append(os.path.join(dirpath, filename))
                     pbar.update(1)
 
     print(f"Total PDF files downloaded: {len(downloaded_pdfs)}")
-    return downloaded_pdfs
+    return downloaded_pdfs, duplicate_paths
 
 
 def find_missing_pdfs(grant_pats, downloaded_pdfs):
@@ -50,6 +53,12 @@ def find_extra_pdfs(downloaded_pdfs, grant_pats):
     print(f"Extra PDF files found in the download directory but not in the grant file: {len(extra_pdfs)}")
     return extra_pdfs
 
+def find_duplicate_pdfs(duplicate_paths):
+    duplicates = {pdf: paths for pdf, paths in duplicate_paths.items() if len(paths) > 1}
+    print(f"Total duplicate PDFs that has been downloaded found: {len(duplicates)}")
+    return duplicates
+
+
 def write_missing_pdfs(missing_pdfs, file_path):
     with open(file_path, 'w') as file:
         for pdf in sorted(missing_pdfs):
@@ -60,6 +69,14 @@ def write_extra_pdfs(extra_pdfs, file_path):
         for pdf in sorted(extra_pdfs):
             file.write(pdf + "\n")
 
+def write_duplicate_pdfs(duplicates, file_path):
+    with open(file_path, 'w') as file:
+        for pdf, paths in sorted(duplicates.items()):
+            file.write(f"{pdf}: {len(paths)} duplicate(s)\n")
+            for path in paths:
+                file.write(f"  {path}\n")
+    print(f"Duplicate PDFs and their paths written to: {file_path}")
+    
 if __name__ == "__main__":
      # 定义需要遍历的根目录列表
     root_paths = [
@@ -73,11 +90,13 @@ if __name__ == "__main__":
     grant_file = os.path.join(root_paths[0], "grant_pnr_all2406.txt")
     missing_list_file = os.path.join(root_paths[0], "missing_pdfs2406.txt")
     extra_list_file = os.path.join(root_paths[0], "extra_pdfs2406.txt")
+    duplicate_list_file = os.path.join(root_paths[0], "duplicate_pdfs2406.txt")
 
     grant_pats = read_patents(grant_file)
     downloaded_pdfs = list_downloaded_pdfs(root_paths, exclude_paths)
     missing_pdfs = find_missing_pdfs(grant_pats, downloaded_pdfs)
     extra_pdfs = find_extra_pdfs(downloaded_pdfs, grant_pats)
+    duplicates = find_duplicate_pdfs(downloaded_pdfs)
 
     # 写入缺失的 PDF 列表
     write_missing_pdfs(missing_pdfs, missing_list_file)
@@ -85,6 +104,9 @@ if __name__ == "__main__":
     # 写入多余的 PDF 列表
     write_extra_pdfs(extra_pdfs, extra_list_file)
 
+    # 写入重复的 PDF 列表及其路径
+    write_duplicate_pdfs(duplicates, duplicate_list_file)
+    
     if not missing_pdfs:
         print("No missing PDFs found.")
     else:
@@ -94,4 +116,9 @@ if __name__ == "__main__":
         print("No extra PDFs found.")
     else:
         print(f"Extra PDF has been written to {extra_list_file}")
+    
+    if not duplicates:
+        print("No duplicate PDFs found.")
+    else:
+        print(f"Duplicate PDFs have been written to {duplicate_list_file}")
 
