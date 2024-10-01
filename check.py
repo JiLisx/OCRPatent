@@ -7,19 +7,27 @@ def read_patents(file_path):
     print(f"Total granted patents read: {len(patents)}")
     return patents
 
-def list_downloaded_pdfs(root_paths):
+def list_downloaded_pdfs(root_paths, exclude_paths=None):
     downloaded_pdfs = set()
     total_files = 0
 
-    # 计算 PDF 文件总数
+    if exclude_paths is None:
+        exclude_paths = []
+
+    # 计算 PDF 文件总数，同时排除指定的文件夹
     for root_path in root_paths:
         for dirpath, _, filenames in os.walk(root_path):
+            if any(exclude in dirpath for exclude in exclude_paths):
+                continue  # Skip excluded paths
             total_files += len([f for f in filenames if f.endswith('.pdf')])
     print(f"Total patent PDF files found: {total_files}")
 
+    # 使用进度条扫描 PDF 文件
     with tqdm(total=total_files, desc="Scanning PDF files") as pbar:
         for root_path in root_paths:
             for dirpath, _, filenames in os.walk(root_path):
+                if any(exclude in dirpath for exclude in exclude_paths):
+                    continue  # Skip excluded paths
                 for filename in filenames:
                     if filename.endswith('.pdf'):
                         # 去掉文件名中的特殊字符
@@ -28,8 +36,9 @@ def list_downloaded_pdfs(root_paths):
                         downloaded_pdfs.add(clean_filename)
                     pbar.update(1)
 
-    print(f"Total PDF files processed : {len(downloaded_pdfs)}")
+    print(f"Total PDF files processed: {len(downloaded_pdfs)}")
     return downloaded_pdfs
+
 
 def find_missing_pdfs(grant_pats, downloaded_pdfs):
     missing_pdfs = grant_pats - downloaded_pdfs
@@ -59,12 +68,16 @@ if __name__ == "__main__":
         "/data/home/jdang/SIPO_PDF_B",
         "/data/home/liji/dload/dload2023"
     ]
+    # 定义需要排除的目录
+    exclude_paths = [
+        "/data/home/liji/dload/dload2023/CN123A"
+    ]
     grant_file = os.path.join(root_paths[0], "grant_pnr_all2406.txt")
     missing_list_file = os.path.join(root_paths[0], "missing_pdfs2406.txt")
     extra_list_file = os.path.join(root_paths[0], "extra_pdfs2406.txt")
 
     grant_pats = read_patents(grant_file)
-    downloaded_pdfs = list_downloaded_pdfs(root_paths)
+    downloaded_pdfs = list_downloaded_pdfs(root_paths, exclude_paths)
     missing_pdfs = find_missing_pdfs(grant_pats, downloaded_pdfs)
     extra_pdfs = find_extra_pdfs(downloaded_pdfs, grant_pats)
 
