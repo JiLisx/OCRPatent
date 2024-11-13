@@ -137,3 +137,5 @@ if __name__ == '__main__':
     output_folder = sys.argv[2]
     input_pdf_list = sys.argv[3]
     num_processes = int(sys.argv[4]) if len(sys.argv) > 4 else 10
+
+    process_pdf_folder(pdf_folder_path, output_folder, input_pdf_list, num_processes)
