@@ -1,4 +1,4 @@
-# 运行main_ocr_bigforce_parse.py
+# 运行main_ocr_bigforce.py
 - 需要在文件内指定pdf_folder_path和output_folder
 - 已完成的finish文件仅限本次任务
 
@@ -11,7 +11,8 @@
 - 给参数，运行main_ocr_bigforce_parse，处理某个子文件夹的pdf，并且跳过全局的finish文件，避免重复处理
   - `python3 main_ocr_bigforce_parse.py --pdf_folder_path ./CN117/ --output_folder ./ocr_results/CN117 --global_finish_file ./global_finish_continue.txt --global_failed_file ./global_failed_continue.txt --num_processes 10`
 
-# 运行reocr
+# reocr需要待处理pnr的txt
+## 运行reocr
 - `python3 reocr_ref_error.py /data/home/jdang/SIPO_PDF_B/ /data/home/jdang/SIPO_PDF_B/ocr_results/reocr_error/ /data/home/jdang/SIPO_PDF_B/ocr_results/refs_error.txt`
 
 
