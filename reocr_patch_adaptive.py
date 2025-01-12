@@ -1,3 +1,5 @@
+# 如果list里的pdf在目录里找不到，写出pdf到missingpdf.txt
+
 import os
 import json
 import numpy as np
@@ -86,15 +88,16 @@ def get_target_pdfs(input_pdf_list, folder_path):
             if file in target_pdfs:
                 file_path = os.path.relpath(os.path.join(root, file), folder_path)
                 pdf_files.append(file_path)
-    return pdf_files
+    return pdf_files, target_pdfs
 
 def process_pdf_folder(folder_path, output_folder, input_pdf_list,num_processes=10):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    finish_file = os.path.join(output_folder, "finish_reocr_patch2.txt")
-    failed_file = os.path.join(output_folder, "failed_reocr_patch2.txt")
-    json_file = os.path.join(output_folder, "frontpage_reocr_patch2.json")
+    finish_file = os.path.join(output_folder, "finish_reocr.txt")
+    failed_file = os.path.join(output_folder, "failed_reocr.txt")
+    json_file = os.path.join(output_folder, "frontpage_reocr.json")
+    missing_file = os.path.join(output_folder, "missingpdf.txt") 
 
     if not os.path.exists(finish_file):
         open(finish_file, 'w').close()
@@ -108,7 +111,17 @@ def process_pdf_folder(folder_path, output_folder, input_pdf_list,num_processes=
     with open(failed_file, 'r') as file:
         failed_pdfs = set(line.strip() for line in file.readlines())
 
-    pdf_files = get_target_pdfs(input_pdf_list, folder_path)
+    pdf_files, target_pdfs = get_target_pdfs(input_pdf_list, folder_path)
+    found_pnrs = set(os.path.basename(pdf).split('.')[0] for pdf in pdf_files)
+    missing_pnrs = {pnr for pnr in (line.strip().split('|')[0] for line in open(input_pdf_list))} - found_pnrs
+
+    # 写入缺失的PNR到missingpdf.txt
+    with open(missing_file, 'w') as f:
+        for missing_pdf in sorted(missing_pnrs):
+            pnr = os.path.basename(missing_pdf).split('.')[0]
+            f.write(pnr + '\n')
+    print(f"Missing PNRs have been written to {missing_file}")
+    
     pdf_files = [os.path.join(folder_path, pdf_file) for pdf_file in pdf_files]
 
     pool = multiprocessing.Pool(num_processes)
