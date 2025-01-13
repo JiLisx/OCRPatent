@@ -5,9 +5,9 @@ import re
 from datetime import datetime
 import glob
 
-ipt_dir = "/data/home/jdang/SIPO_PDF_B/ocr_results"
-opt_dir = "/data/home/jdang/SIPO_PDF_B/ocr_results"
-optfile = "second_pg.txt"
+ipt_dir = "/data/home/jdang/SIPO_PDF_B/results_frontpage/reocr/patch4/"
+opt_dir = "/data/home/jdang/SIPO_PDF_B/"
+optfile = "second_pg_patch4.txt"
 
 if not os.path.exists(opt_dir):
     os.mkdir(opt_dir)
