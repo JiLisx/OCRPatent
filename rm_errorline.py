@@ -6,9 +6,9 @@ import glob
 import shutil
 
 # ==Settings======================
-ipt_dir = "/Volumes/main/project/npl/rm_errorline/ocrresults/"
-opt_dir = "/Volumes/main/project/npl/rm_errorline/ocr_results_processed/"
-patch_list_dir = "/Volumes/main/project/npl/rm_errorline/rmlist/"
+ipt_dir = "/data/home/jdang/SIPO_PDF_B/results_frontpage/ocr_results/"
+opt_dir = "/data/home/jdang/SIPO_PDF_B/results_frontpage/ocr_results_processed/"
+patch_list_dir = "/data/home/jdang/SIPO_PDF_B/patch_list"
 
 def read_pnr_from_file(file_path):
     """
