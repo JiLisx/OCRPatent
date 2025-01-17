@@ -1,31 +1,32 @@
 import os
 from tqdm import tqdm
-from collections import defaultdict
-import re
 import shutil
 import csv
+import re
+from collections import defaultdict 
+
+# Function to read patents from a CSV file
 def read_patents(file_path, patent_column_index=0):
     patents = set()
     with open(file_path, 'r', newline='', encoding='utf-8') as file:
         reader = csv.reader(file)
         for row in reader:
             if len(row) > patent_column_index:
-                patent_number = row[patent_column_index].strip().upper()  # Ensure consistency
+                patent_number = row[patent_column_index].strip().upper()
                 patents.add(patent_number)
     print(f"Total granted patents read: {len(patents)}")
     return patents
 
+# Function to list all the downloaded PDF files and handle duplicates
 def list_downloaded_pdfs(root_paths):
     downloaded_pdfs = set()
-    duplicate_paths = defaultdict(list)
+    duplicate_paths = defaultdict(list) 
     non_pdfs = []
 
-    # 预编译正则表达式，用于移除 '-p920mint'、'*' 和 '.'
     clean_regex = re.compile(r'\.pdf$', re.IGNORECASE)
 
     delete_dir_name = "delete"
 
-    # 初始化进度条，没有预设总数
     with tqdm(total=None, desc="Scanning PDF files", unit="file") as pbar:
         for root_path in root_paths:
        	    for dirpath, dirs, filenames in os.walk(root_path, topdown=True):
@@ -33,7 +34,6 @@ def list_downloaded_pdfs(root_paths):
                 
                 for filename in filenames:
                     if filename.lower().endswith('.pdf'):
-                        # 使用正则表达式清理文件名
                         clean_filename = clean_regex.sub('', filename)
                         clean_filename = clean_filename.strip().upper()  # 去除首尾空格并转换为大写
                         downloaded_pdfs.add(clean_filename)
@@ -43,6 +43,8 @@ def list_downloaded_pdfs(root_paths):
                         non_pdfs.append(os.path.join(dirpath,filename))
 
     print(f"Total unique PDF files downloaded: {len(downloaded_pdfs)}")
+    print(f"Duplicate PDFs files downloaded: {len(duplicate_paths)}")
+
     return downloaded_pdfs, duplicate_paths, non_pdfs
 
 
@@ -51,36 +53,34 @@ def write_reports(grant_pats, downloaded_pdfs, duplicate_paths, output_dir):
     extra_pdfs = downloaded_pdfs - grant_pats
     duplicates = {pdf: paths for pdf, paths in duplicate_paths.items() if len(paths) > 1}
 
-    # 写入缺失的 PDF 列表
+    # Missing PDFs
     missing_list_file = os.path.join(output_dir, "missing_pdfs2406.txt")
     with open(missing_list_file, 'w') as file:
         for pdf in sorted(missing_pdfs):
             file.write(pdf + "\n")
-    print(f"Missing PDFs have been written to: {missing_list_file}")
 
-    # 写入多余的 PDF 列表
+    # Extra PDFs
     extra_list_file = os.path.join(output_dir, "extra_pdfs2406.txt")
     with open(extra_list_file, 'w') as file:
         for pdf in sorted(extra_pdfs):
             file.write(pdf + "\n")
-    print(f"Extra PDFs have been written to: {extra_list_file}")
 
-    # 写入重复的 PDF 列表及其路径
+    # Duplicate PDFs
     duplicate_list_file = os.path.join(output_dir, "duplicate_pdfs2406.txt")
     with open(duplicate_list_file, 'w') as file:
         for pdf, paths in sorted(duplicates.items()):
             line = f"{pdf}, {len(paths)}, " + ", ".join(paths)
             file.write(line + "\n")
-    print(f"Duplicate PDFs and their paths have been written to: {duplicate_list_file}")
 
     return missing_pdfs, extra_pdfs, duplicates
+
 
 def determine_files_to_delete(duplicates):
     files_to_keep = {}
     files_to_delete = []
 
     for pdf, paths in duplicates.items():
-        # 获取每个文件的修改时间
+        # Sort by modification time, keep the latest file
         paths_with_mtime = []
         for path in paths:
             try:
@@ -92,105 +92,125 @@ def determine_files_to_delete(duplicates):
         if not paths_with_mtime:
             continue
 
-        # 按修改时间排序，保留最新的文件
+        # Sort by modification time, keep the latest file
         paths_with_mtime.sort(key=lambda x: x[1], reverse=True)
         keep_path, keep_mtime = paths_with_mtime[0]
         files_to_keep[pdf] = keep_path
 
-        # 其他文件标记为删除
+        # Mark the other files for deletion
         for path, _ in paths_with_mtime[1:]:
             files_to_delete.append(path)
 
     return files_to_keep, files_to_delete
 
 
-def delete_files(files_to_delete, log_file_path, root_paths):
+def move_pdfs_and_cleanup(downloaded_pdfs, root_paths, delete_dir, log_file_path, duplicate_paths):
     """
-    将需要删除的文件移动到 'delete' 文件夹，并记录操作日志。
+    Handle PDF files:
+    - Move duplicate files to the delete folder.
+    - Files starting with CN followed by 9, 8, or 7 digits should be moved to corresponding folders based on the rules.
+    - If the file name doesn't match any rule, move it to the CN000 folder.
     
-    参数:
-    - files_to_delete: 要移动的文件路径列表。
-    - log_file_path: 操作日志文件路径。
-    - root_paths: 根目录列表，用于计算相对路径。
+    Parameters:
+    - downloaded_pdfs: List of downloaded PDF files.
+    - root_paths: List of root directory paths.
+    - delete_dir: Path to the directory for duplicate files.
+    - log_file_path: Path to the operation log file.
+    - duplicate_paths: Dictionary containing duplicate file paths.
     """
-    deleted_files = []
-    error_files = []
+
     log_entries = []
+    error_files = []
+    deleted_files = []
     
-    # 定义 'delete' 文件夹路径
-    delete_dir = os.path.join(os.path.dirname(log_file_path), "delete")
-    
-    # 创建 'delete' 文件夹，如果不存在
-    os.makedirs(delete_dir, exist_ok=True)
-    
-    for file in tqdm(files_to_delete, desc="Moving duplicate PDF files to 'delete' folder", unit="file"):
+    os.makedirs(delete_dir, exist_ok=True)  
+
+    for pdf in tqdm(downloaded_pdfs, desc="Processing PDFs", unit="file"):
         try:
-            # 计算文件相对于其根目录的相对路径
-            relative_path = None
-            for root_path in root_paths:
-                if file.startswith(root_path):
-                    relative_path = os.path.relpath(file, root_path)
-                    break
-            if relative_path is None:
-                # 如果无法找到相对路径，直接使用文件名
-                relative_path = os.path.basename(file)
-            
-            # 定义目标路径
-            destination_path = os.path.join(delete_dir, relative_path)
-            
-            # 确保目标子目录存在
-            destination_dir = os.path.dirname(destination_path)
-            os.makedirs(destination_dir, exist_ok=True)
-            
-            # 移动文件
-            shutil.move(file, destination_path)
-            deleted_files.append(file)
-            log_entries.append(f"Moved: {file} -> {destination_path}\n")
+            # Check if the file is a duplicate
+            if pdf in duplicate_paths:
+                # Move the duplicate file to the delete folder
+                for duplicate_path in duplicate_paths[pdf]:
+                    relative_path = os.path.relpath(duplicate_path, root_paths[0])
+                    destination_path = os.path.join(delete_dir, relative_path)
+                    os.makedirs(os.path.dirname(destination_path), exist_ok=True) 
+                    shutil.move(duplicate_path, destination_path)  
+                    log_entries.append(f"Moved duplicate: {duplicate_path} -> {destination_path}\n")
+                continue 
+
+            # Check the file name pattern
+            match = re.match(r'(CN\d{3})(\d{5})([A-Z]?)', pdf)  # Handle 9-digit, 8-digit, 7-digit cases
+
+            if match:
+
+                folder_prefix = match.group(1) 
+                file_number = match.group(2)  
+                file_suffix = match.group(3)  
+
+                if len(file_number) == 5:   # 9-digit case
+                    folder_name = f"{folder_prefix}{file_number[:2]}"  
+                    subfolder_name = f"{folder_prefix}{file_number[:5]}"  
+                elif len(file_number) == 7:  # 7-digit case
+                    file_number = f"00{file_number}"
+                    folder_name = f"{folder_prefix}{file_number[:2]}"
+                    subfolder_name = f"{folder_prefix}{file_number[:5]}"
+                elif len(file_number) == 8:  # 8-digit case
+                    file_number = f"0{file_number}"
+                    folder_name = f"{folder_prefix}{file_number[:2]}"
+                    subfolder_name = f"{folder_prefix}{file_number[:5]}"
+
+                destination_folder = os.path.join(root_paths[0], folder_name, subfolder_name)
+                os.makedirs(destination_folder, exist_ok=True)  
+                source_path = os.path.join(root_paths[0], pdf)
+                destination_path = os.path.join(destination_folder, pdf)
+                shutil.move(source_path, destination_path) 
+
+                log_entries.append(f"Moved: {pdf} -> {destination_folder}\n")
+            else:
+                # If the file name doesn't match the above rules, move it to CN000 folder
+                destination_folder = os.path.join(root_paths[0], "CN000")
+                os.makedirs(destination_folder, exist_ok=True)
+                source_path = os.path.join(root_paths[0], pdf)
+                destination_path = os.path.join(destination_folder, pdf)
+                shutil.move(source_path, destination_path) 
+                log_entries.append(f"Moved (unknown format): {pdf} -> {destination_folder}\n")
+
         except Exception as e:
-            error_files.append((file, str(e)))
-            log_entries.append(f"Error moving {file}: {e}\n")
-    
-    # 批量写入日志
+            error_files.append((pdf, str(e)))
+            log_entries.append(f"Error moving {pdf}: {e}\n")
+
+    # Write the log
     with open(log_file_path, 'w') as log_file:
         log_file.writelines(log_entries)
 
-    # print(f"Moved files have been logged to: {log_file_path}")
-
+    # Output processing result
     if error_files:
         print(f"Some files could not be moved. Details are in {log_file_path}")
     else:
-        print("All duplicate files have been successfully moved to the 'delete' folder.")
-
-
-def write_files_to_delete(files_to_delete, file_path):
-    with open(file_path, 'w') as file:
-        for path in files_to_delete:
-            file.write(path + "\n")
-    print(f"List of files to delete has been written to: {file_path}")
+        print(f"All files have been processed and moved successfully.")
 
 
 if __name__ == "__main__":
-     # 定义需要遍历的根目录列表
+
     root_paths = ["/data/home/jdang/SIPO_PDF_B/pdf"]
     output_dir = root_paths[0]
     grant_file = "/data/home/jdang/SIPO_PDF_B/grant2406.csv"
-    missing_list_file = os.path.join(root_paths[0], "missing_pdfs2406.txt")
-    extra_list_file = os.path.join(root_paths[0], "extra_pdfs2406.txt")
-    duplicate_list_file = os.path.join(root_paths[0], "duplicate_pdfs2406.txt")
-    files_to_delete_list_file = os.path.join(root_paths[0], "files_to_delete2406.txt")
-    deletion_log_file = os.path.join(root_paths[0], "deletion_log2406.txt")
-
 
     grant_pats = read_patents(grant_file)
+    
+    # Get all downloaded PDFs, duplicate PDFs, and non-PDF files
     downloaded_pdfs, duplicate_paths, non_pdfs = list_downloaded_pdfs(root_paths)
 
-    # 定义下载的 PDF 文件列表输出路径
-    downloaded_list_file = os.path.join(output_dir, "downloaded_pdfs2406.txt")
+    # Write report files: including missing PDFs, extra PDFs, and duplicate PDFs
+    write_reports(grant_pats, downloaded_pdfs, duplicate_paths, output_dir)
 
-    # 定义非 PDF 文件列表输出路径
+    # Get the list of files to keep and delete
+    files_to_keep, files_to_delete = determine_files_to_delete(duplicate_paths)
+
+    # Write the list of downloaded PDFs and non-PDF files to files
+    downloaded_list_file = os.path.join(output_dir, "downloaded_pdfs2406.txt")
     non_pdfs_list_file = os.path.join(output_dir, "non_pdfs2406.txt")
 
-    # 将 downloaded_pdfs 写入文件
     with open(downloaded_list_file, 'w') as f:
         for pdf in sorted(downloaded_pdfs):
             f.write(pdf + "\n")
@@ -200,37 +220,11 @@ if __name__ == "__main__":
         for path in sorted(non_pdfs):
             f.write(path + "\n")
     print(f"Non-PDF files have been written to: {non_pdfs_list_file}")
-
-
-    missing_pdfs, extra_pdfs, duplicates = write_reports(grant_pats, downloaded_pdfs, duplicate_paths, output_dir)
-
-    if not missing_pdfs:
-        print("No missing PDFs found.")
-    else:
-        print(f"Missing pdf has been written to {missing_list_file}")
-
-    if not extra_pdfs:
-        print("No extra PDFs found.")
-    else:
-        print(f"Extra PDF has been written to {extra_list_file}")
     
-    if not duplicates:
-        print("No duplicate PDFs found.")
-    else:
-        print(f"Duplicate PDFs have been written to {duplicate_list_file}")
-
-        # 确定要保留和删除的文件
-        files_to_keep, files_to_delete = determine_files_to_delete(duplicates)
-
-        # 将要删除的文件写入文件
-        write_files_to_delete(files_to_delete, files_to_delete_list_file)
-
-        # 列出将要删除的文件
-        print("\n以下是将要删除的重复旧文件：")
-        for file in files_to_delete:
-            print(file)
-
-        # 直接删除文件，并记录删除的文件路径
-        delete_files(files_to_delete, deletion_log_file, root_paths)
+    # delete duplicates files
+    delete_dir = os.path.join(root_paths[0], "delete")
+    log_file_path = os.path.join(root_paths[0], "move_log.txt")
+    move_pdfs_and_cleanup(downloaded_pdfs, root_paths, delete_dir, log_file_path, duplicate_paths)
 
     print("\nDone!")
+
