@@ -36,7 +36,7 @@ def extract_ref(pnr,left,right,keyword):
                         break
                     print(pnr+"|"+line)
 
-file_name = 'frontpage_reocr_patch2.json'
+file_name = 'sample.txt'
 
 with open(file_name, "r") as f:
     for line in f.readlines():
