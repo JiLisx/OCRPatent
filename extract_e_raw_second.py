@@ -12,17 +12,20 @@ label = r"[0-9]{4,}[A-Z]|[A-Z].*[0-9]{4,}"
 
 if not os.path.exists(opt_dir):
     os.mkdir(opt_dir)
+
+
 def load_pnr(pnrfile):
     gdate = {}
-    with open(pnrfile,"r") as f:
+    with open(pnrfile, "r") as f:
         for line in f.readlines():
-            gdate.update({line.split(",")[0]:line.split(",")[1].replace("\n","")})
+            gdate.update({line.split(",")[0]: line.split(",")[1].replace("\n", "")})
     return gdate
 
-def extract_ref(pnr,left,right,keyword):
+
+def extract_ref(pnr, left, right, keyword):
     if re.search(keyword, left, re.IGNORECASE) is None:
         if re.search(keyword, right, re.IGNORECASE) is not None:
-            refs = re.findall(keyword+"[\s\S]*", right, re.IGNORECASE)[0]
+            refs = re.findall(keyword + "[\s\S]*", right, re.IGNORECASE)[0]
             for line in refs.split("\n")[1:]:
                 if len(line) > 0:
                     if re.search(label, line, re.IGNORECASE) is not None:
@@ -52,31 +55,33 @@ def extract_ref(pnr,left,right,keyword):
                         # break
                         with open(opt_dir + "/refs_add.txt", "a") as g:
                             g.write(pnr + "|" + line + "\n")
+
+
 def loop_files():
     dt2 = datetime.strptime("2010-04-07", "%Y-%m-%d")
-    for file_name in glob.glob(os.path.join(ipt_dir, '*','*.json')):
+    for file_name in glob.glob(os.path.join(ipt_dir, '*', '*.json')):
         print(file_name)
-        with open(file_name,"r") as f:
+        with open(file_name, "r") as f:
             for line in f.readlines():
                 descs = json.loads(line)
-                if descs.__class__ == list :
+                if descs.__class__ == list:
                     for desc in descs:
                         # if desc != "\n":
-                        pnr = re.findall("CN[0-9]+[A-Z]",desc["pnr"])[0]
+                        pnr = re.findall("CN[0-9]+[A-Z]", desc["pnr"])[0]
                         left = desc["left2"].replace(" ", "")
                         right = desc["right2"].replace(" ", "")
                         # record the file name of each patent
-                        with open(opt_dir+"/pnr_pos.txt","a") as g:
-                            g.write(pnr+"|"+file_name+"\n")
+                        with open(opt_dir + "/pnr_pos.txt", "a") as g:
+                            g.write(pnr + "|" + file_name + "\n")
                         if pnr in gdate.keys():
                             dt1 = datetime.strptime(gdate[pnr], "%Y-%m-%d")
                             if dt1 < dt2:
-                                extract_ref(pnr,left,right,keyword="参考文献")
+                                extract_ref(pnr, left, right, keyword="参考文献")
                             else:
-                                extract_ref(pnr,left, right, keyword="对比文件")
+                                extract_ref(pnr, left, right, keyword="对比文件")
                 else:
                     desc = descs
-                    pnr = re.findall("CN[0-9]+[A-Z]",desc["pnr"])[0]
+                    pnr = re.findall("CN[0-9]+[A-Z]", desc["pnr"])[0]
                     left = desc["left2"].replace(" ", "")
                     right = desc["right2"].replace(" ", "")
                     # record the file name of each patent
@@ -88,6 +93,7 @@ def loop_files():
                             extract_ref(pnr, left, right, keyword="参考文献")
                         else:
                             extract_ref(pnr, left, right, keyword="对比文件")
+
 
 if __name__ == '__main__':
     gdate = load_pnr(pnrfile)
