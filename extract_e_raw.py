@@ -16,6 +16,13 @@ label = r"[0-9]{4,}[A-Z]|[A-Z].*[0-9]{4,}"
 if not os.path.exists(opt_dir):
     os.mkdir(opt_dir)
 
+if not os.path.exists(os.path.join(opt_dir, pnr_pos)):
+    with open(os.path.join(opt_dir, pnr_pos), 'w') as file:
+        pass
+
+if not os.path.exists(os.path.join(opt_dir, finished)):
+    with open(os.path.join(opt_dir, finished), 'w') as file:
+        pass
 
 def load_pnr(pnrfile):
     gdate = {}
